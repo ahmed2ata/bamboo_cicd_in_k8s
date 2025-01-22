@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bamboo-server
+spec:
+  replicas: 1
+  serviceName: bamboo-server
+  selector:
+    matchLabels:
+      app: bamboo-server
+  template:
+    metadata:
+      labels:
+        app: bamboo-server
+    spec:
+      containers:
+      - name: bamboo-server
+        image: atlassian/bamboo
+        env:
+        - name: BAMBOO_HOME
+          value: /var/atlassian/application-data/bamboo
+        - name: JDBC_DRIVER
+          value: org.postgresql.Driver
+        - name: JDBC_URL
+          value: jdbc:postgresql://postgres:5432/bamboo
+        - name: JDBC_USER
+          value: bamboo
+        - name: JDBC_PASSWORD
+          value: bamboo123
+        ports:
+        - containerPort: 8085
+        volumeMounts:
+        - name: bamboo-data
+          mountPath: /var/atlassian/application-data/bamboo
+        - name: docker-socket
+          mountPath: /var/run/docker.sock
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+  volumeClaimTemplates:
+  - metadata:
+      name: bamboo-data
+    spec:
+      accessModes: 
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bamboo-server
+spec:
+  type: ClusterIP
+  selector:
+    app: bamboo-server
+  ports:
+  - protocol: TCP
+    port: 8085
+    targetPort: 8085
