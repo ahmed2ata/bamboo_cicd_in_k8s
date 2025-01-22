@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bamboo-agent
+spec:
+  serviceName: bamboo-agent-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamboo-agent
+  template:
+    metadata:
+      labels:
+        app: bamboo-agent
+    spec:
+      containers:
+      - name: bamboo-agent
+        image: atlassian/bamboo-agent-base:latest
+        env:
+        - name: BAMBOO_SERVER
+          value: http://bamboo-server:8085
+        - name: AGENT_UUID
+          value: agent1
+        securityContext:
+          privileged: true  # Required for Docker
+        volumeMounts:
+        - name: bamboo-data
+          mountPath: ~/bamboo-agent-home  # Update with actual path
+        - name: docker-socket
+          mountPath: /var/run/docker.sock  # Mount Docker socket
+        resources:
+          requests:
+            memory: "2Gi"    
+            cpu: "500m"      
+          limits:
+            memory: "4Gi"    
+            cpu: "2"         
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+      - name: bamboo-data
+        emptyDir: {}  
+  volumeClaimTemplates:
+  - metadata:
+      name: bamboo-data
+    spec:
+      accessModes: 
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
