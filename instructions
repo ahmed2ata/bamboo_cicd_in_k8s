@@ -1,0 +1,33 @@
+1-Deployment phase:
+minikube addons enable ingress
+and then apply the mainifist files in this order :
+
+kubectl apply -f postgres.yaml
+kubectl apply -f bamboo-server.yaml
+kubectl apply -f ingress.yaml
+kubectl apply -f bamboo-agent.yaml
+
+then at /etc/hosts put this line : minikube_ip bamboo.local
+
+then you will can access the server from web successfully as shown in all resources pics
+
+2-Configuration phase:
+at the server ui configure it to access the db by this credentials :
+the url:jdbc:postgresql://postgres:5432/bamboo
+usr: bamboo
+password: bamboo123
+
+then at remote agent page you will see your agent waiting for approval , the approve it but it will not appear at online because due to agent logs it failed to connect because he tried to connect using ssl so at the server we will :
+kubectl exec -it bamboo-server-0 -- vi /var/atlassian/application-data/bamboo/bamboo.cfg.xml
+then replace this line : <property name="bamboo.jms.broker.client.uri">failover:(ssl://bamboo-server-0.bamboo-server.default.svc.cluster.local:54663?socket.verifyHostName=false&amp;wireFormat.maxInactivityDuration=90000)?initialReconnectDelay=15000&amp;maxReconnectAttempts=10</property>
+with this: <property name="bamboo.jms.broker.client.uri">failover:(tcp://bamboo-server-0.bamboo-server.default.svc.cluster.local:54663?wireFormat.maxInactivityDuration=90000)?initialReconnectDelay=15000&amp;maxReconnectAttempts=10</property>
+then restart the agent , it should be appear an oniline target on the sarver ui as shown in agent_authentication and onile agent pics
+
+3-configuring the agent to be with containerization capabillity:
+as docker follows client-server arch , at the agent file we mounted the docker socket from our local machine to inside the pod so now we have the docker server then go inside the the pod and install the docker cli on it by this commands:
+apt-get update
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | tee /etc/apt/trusted.gpg.d/docker.asc
+echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable" > /etc/apt/sources.list.d/docker.list
+apt-get update
+apt-get install docker-ce-cli
+ finally make sure that bamboo user at the agent can access the docker socket because he is the user who runs the pipelines not the root.
