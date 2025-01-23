@@ -31,3 +31,16 @@ echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable" > 
 apt-get update
 apt-get install docker-ce-cli
  finally make sure that bamboo user at the agent can access the docker socket because he is the user who runs the pipelines not the root.
+
+bitbucket-postgress configuration: 
+kubectl exec -it <postgres-pod-name> -- psql -U bamboo
+CREATE DATABASE bitbucket;
+CREATE USER bamboo WITH PASSWORD 'bitbucket123';
+GRANT ALL PRIVILEGES ON DATABASE bitbucket TO bamboo;
+\c bitbucket;
+GRANT ALL PRIVILEGES ON SCHEMA public TO bamboo;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bamboo;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO bamboo;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO bamboo;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO bamboo;
+\q
